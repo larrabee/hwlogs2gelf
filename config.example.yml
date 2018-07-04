@@ -1,0 +1,29 @@
+redis:
+  conn: redis:6379
+  password: ""
+  db: 0
+
+gelf:
+  conn: 8.8.8.8:12206
+  proto: UDP
+  workers: 64
+  tag: highwinds
+
+ftp:
+  conn: qwe213.logs.hwcdn.net:21
+  username: user
+  password: password
+  timeout: 30
+  sleep_interval: 10
+
+sites:
+  qwe123:
+    name: google.com
+    workers: 8
+  asd456:
+    name: google.de
+    workers: 8
+
+logging:
+  level: ERROR
+

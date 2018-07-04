@@ -1,0 +1,19 @@
+version: '2.2'
+services:
+  hwlogs2gelf:
+      build: .
+      container_name: "hwlogs2gelf"
+      restart: "always"
+      links:
+        - "hwlogs2gelf-redis:hwlogs2gelf-redis"
+
+  hwlogs2gelf-redis:
+      image: "redis:4-alpine"
+      container_name: "hwlogs2gelf-redis"
+      restart: "always"
+      volumes:
+        - "hwlogs2gelf-redis-data:/data"
+
+volumes:
+  hwlogs2gelf-redis-data: {}
+
