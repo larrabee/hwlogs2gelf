@@ -1,5 +1,5 @@
 redis:
-  conn: redis:6379
+  conn: hwlogs2gelf-redis:6379
   password: ""
   db: 0
 
