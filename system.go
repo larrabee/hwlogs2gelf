@@ -1,15 +1,14 @@
 package main
 
 import (
-	"github.com/spf13/viper"
-	"os"
-	"time"
+	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/larrabee/ftp"
+	"github.com/spf13/viper"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
-	"fmt"
+	"os"
+	"time"
 )
-
 
 type FtpEntry struct {
 	Path string
@@ -62,20 +61,20 @@ func formatMessage(record []string, site string, config *viper.Viper) (gelfMessa
 	gelfMessage.TimeUnix = float64(pTime.Unix())
 	gelfMessage.Short = record[14]
 	gelfMessage.Extra = map[string]interface{}{
-		"method": record[2],
-		"remote": record[3],
-		"scheme": record[4],
-		"referer": record[5],
-		"agent": record[6],
-		"size": record[7],
-		"req_size": record[8],
-		"res_size": record[9],
-		"request_time": record[11],
-		"code": record[12],
-		"parameters": record[13],
+		"method":                  record[2],
+		"remote":                  record[3],
+		"scheme":                  record[4],
+		"referer":                 record[5],
+		"agent":                   record[6],
+		"size":                    record[7],
+		"req_size":                record[8],
+		"res_size":                record[9],
+		"request_time":            record[11],
+		"code":                    record[12],
+		"parameters":              record[13],
 		"path_without_parameters": record[14],
-		"tag": config.GetString("gelf.tag"),
-		"site_id": site,
+		"tag":       config.GetString("gelf.tag"),
+		"site_id":   site,
 		"site_name": config.GetString(fmt.Sprintf("sites.%s.name", site)),
 	}
 

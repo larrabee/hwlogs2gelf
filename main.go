@@ -8,13 +8,13 @@ import (
 	"github.com/larrabee/ftp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
-	"gopkg.in/Graylog2/go-gelf.v2/gelf"
-	"runtime"
 )
 
 var log = logrus.New()
@@ -98,9 +98,8 @@ func LogFilesWatcher(site string, config *viper.Viper, output chan<- gelf.Messag
 	}
 }
 
-
 func ProcessFilesWorker(input <-chan FtpEntry, output chan<- gelf.Message, site string, config *viper.Viper, wg *sync.WaitGroup) {
-	Start:
+Start:
 	ftpConn, err := getFTPConnection(site, config)
 	if err != nil {
 		log.Errorf("FTP Connect error: %s", err)
@@ -142,11 +141,10 @@ func ProcessFilesWorker(input <-chan FtpEntry, output chan<- gelf.Message, site 
 				log.Warnf("Cannot parse message, error: %s", err)
 				continue
 			}
-			output<- message
+			output <- message
 		}
 		gzReader.Close()
 		resp.Close()
-
 
 		err = redisConn.Set(site+entry.Path, "done", time.Second*86400*180).Err()
 		if err != nil {
@@ -159,8 +157,8 @@ func ProcessFilesWorker(input <-chan FtpEntry, output chan<- gelf.Message, site 
 	wg.Done()
 }
 
-
 func GelfOutputWorker(input <-chan gelf.Message, config *viper.Viper) {
+Start:
 	var gelfWriter gelf.Writer
 	var err error
 	switch strings.ToUpper(config.GetString("gelf.proto")) {
@@ -170,7 +168,8 @@ func GelfOutputWorker(input <-chan gelf.Message, config *viper.Viper) {
 		gelfWriter, err = gelf.NewUDPWriter(config.GetString("gelf.conn"))
 	}
 	if err != nil {
-		return
+		log.Errorf("Gelf transport creation failed with error: %s", err)
+		goto Start
 	}
 	for message := range input {
 		log.Debugf("%+v\n", message)
