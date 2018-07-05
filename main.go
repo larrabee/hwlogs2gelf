@@ -85,15 +85,12 @@ func LogFilesWatcher(site string, config *viper.Viper, output chan<- gelf.Messag
 			wg.Add(1)
 			go ProcessFilesWorker(processQueue, output, site, config, &wg)
 		}
-		//processQueue <- FtpEntry{Path: "/cds/2018/07/01/cds_20180701-000000-11544413003dc1.log.gz", Type: ftp.EntryTypeFile}
 
 		files, err := listFTPRecursive("", ftpConn)
 		if err != nil {
 			log.Errorf("FTP Listing error: %s", err)
 			continue
 		}
-
-
 
 		for _, file := range files {
 			if file.Type == ftp.EntryTypeFile {
@@ -165,20 +162,18 @@ func listFTPRecursive(path string, conn *ftp.ServerConn) ([]FtpEntry, error) {
 }
 
 func ProcessFilesWorker(input <-chan FtpEntry, output chan<- gelf.Message, site string, config *viper.Viper, wg *sync.WaitGroup) {
+	Start:
 	ftpConn, err := getFTPConnection(site, config)
 	if err != nil {
 		log.Errorf("FTP Connect error: %s", err)
-		wg.Done()
-		return
+		goto Start
 	}
 	redisConn := getRedisConnection(config)
 
-Main:
 	for entry := range input {
 		resp, err := ftpConn.Retr(entry.Path)
 		if err != nil {
 			log.Errorf("File %s retr request failed with error: %s", entry.Path, err)
-			resp.Close()
 			continue
 		}
 
@@ -188,9 +183,11 @@ Main:
 			resp.Close()
 			continue
 		}
+
 		csvReader := csv.NewReader(gzReader)
 		csvReader.Comma = '\t'
 		csvReader.Comment = '#'
+		csvReader.LazyQuotes = true
 		for {
 			record, err := csvReader.Read()
 			if err == io.EOF {
@@ -200,9 +197,7 @@ Main:
 			}
 			if err != nil {
 				log.Errorf("CSV parsing failed with error: %s", err)
-				gzReader.Close()
-				resp.Close()
-				continue Main
+				continue
 			}
 			message, err := formatMessage(record, site, config)
 			if err != nil {
@@ -211,9 +206,11 @@ Main:
 			}
 			output<- message
 		}
+		gzReader.Close()
+		resp.Close()
 
 
-		err = redisConn.Set(site+entry.Path, "done", 0).Err()
+		err = redisConn.Set(site+entry.Path, "done", time.Second*86400*180).Err()
 		if err != nil {
 			log.Errorf("Setting redis key failed with error: %s", err)
 			continue
@@ -268,6 +265,7 @@ func GelfOutputWorker(input <-chan gelf.Message, config *viper.Viper) {
 		return
 	}
 	for message := range input {
+		log.Debugf("%+v\n", message)
 		err := gelfWriter.WriteMessage(&message)
 		if err != nil {
 			log.Errorf("Gelf message sending failed with error: %s", err)
