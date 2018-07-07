@@ -6,6 +6,8 @@ services:
       restart: "always"
       links:
         - "hwlogs2gelf-redis:hwlogs2gelf-redis"
+      volumes:
+        - "./config.yml:/usr/local/bin/config.yml"
 
   hwlogs2gelf-redis:
       image: "redis:4-alpine"

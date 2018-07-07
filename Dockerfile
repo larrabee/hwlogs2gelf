@@ -11,7 +11,6 @@ FROM alpine:edge AS release
 WORKDIR /usr/local/bin/
 COPY --from=build /go/src/github.com/larrabee/hwlogs2gelf/hwlogs2gelf ./
 RUN apk add -U --no-cache ca-certificates
-COPY ./config.yml ./
 ENTRYPOINT ["/usr/local/bin/hwlogs2gelf"]
 CMD ["config.yml"]
 

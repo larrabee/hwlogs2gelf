@@ -77,6 +77,8 @@ func LogFilesWatcher(site string, config *viper.Viper, output chan<- gelf.Messag
 		files, err := listFTPRecursive("", ftpConn)
 		if err != nil {
 			log.Errorf("FTP Listing error: %s", err)
+			close(processQueue)
+			wg.Wait()
 			continue
 		}
 
@@ -107,10 +109,10 @@ Start:
 	}
 	redisConn := getRedisConnection(config)
 
-	for entry := range input {
-		resp, err := ftpConn.Retr(entry.Path)
+	for file := range input {
+		resp, err := ftpConn.Retr(file.Path)
 		if err != nil {
-			log.Errorf("File %s retr request failed with error: %s", entry.Path, err)
+			log.Errorf("File %s retr request failed with error: %s", file.Path, err)
 			continue
 		}
 
@@ -146,12 +148,12 @@ Start:
 		gzReader.Close()
 		resp.Close()
 
-		err = redisConn.Set(site+entry.Path, "done", time.Second*86400*180).Err()
+		err = redisConn.Set(site+file.Path, "done", time.Second*86400*180).Err()
 		if err != nil {
 			log.Errorf("Setting redis key failed with error: %s", err)
 			continue
 		} else {
-			log.Infof("File '%s' on site '%s' parsed successful", entry.Path, site)
+			log.Infof("File '%s' on site '%s' parsed successful", file.Path, site)
 		}
 	}
 	wg.Done()
